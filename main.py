@@ -95,10 +95,14 @@ def handle_query(call):
         if "current_voice" in user_data:
             del USER_STATE[user_id]["current_voice"]
         bot.send_message(call.message.chat.id, "لطفا جمله خود را دوباره ضبط کنید.")
+        timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,))
+        timer.start()
 
     if call.data == "continue_recording":
         USER_STATE[user_id]["prompt_time"] = time.time()
         bot.send_message(call.message.chat.id, "لطفا جمله خود را دوباره ضبط کنید.")
+        timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,))
+        timer.start()
 
 @bot.message_handler(content_types=['voice'])
 def handle_voice(message):
