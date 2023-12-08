@@ -85,6 +85,7 @@ def handle_query(call):
             new_file.write(downloaded_file)
 
         USER_STATE[user_id]["utterances_recorded"] += 1
+        print(USER_STATE[user_id]["utterances_recorded"] )
         del USER_STATE[user_id]["current_voice"]  # Clear the current voice reference
 
         # Check if all utterances are recorded
@@ -93,7 +94,7 @@ def handle_query(call):
             USER_STATE[user_id]["stage"] = "completed"
         else:
             remaining = number_of_utterances - user_data["utterances_recorded"]
-            bot.send_message(call.message.chat.id, f"Please record and send {number_of_utterances} utterances.")
+            bot.send_message(call.message.chat.id, f"Please record and send {remaining} utterances.")
             timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,))
             timer.start()
 
