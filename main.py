@@ -10,10 +10,11 @@ RECORDING_EXPIRY_TIME = 120  # 120 seconds
 USER_STATE = {}
 number_of_utterances = 10
 
-def send_expiry_message(user_id):
+def send_expiry_message(user_id,conv_id):
     time.sleep(RECORDING_EXPIRY_TIME)
+    remaining = number_of_utterances - user_data["utterances_recorded"]
     user_data = USER_STATE.get(user_id, {})
-    if user_data.get("stage") == "recording" and (time.time() - user_data.get("prompt_time", 0)) >= RECORDING_EXPIRY_TIME:
+    if conv_id == remaining and user_data.get("stage") == "recording" and (time.time() - user_data.get("prompt_time", 0)) >= RECORDING_EXPIRY_TIME:
         markup = types.InlineKeyboardMarkup()
         continue_button = types.InlineKeyboardButton("ادامه", callback_data="continue_recording")
         markup.add(continue_button)
@@ -68,7 +69,7 @@ def handle_query(call):
             "prompt_time": time.time()
         }
         bot.send_message(call.message.chat.id, f"لطفا {number_of_utterances} جمله زیر را ضبط کنید.")
-        timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,))
+        timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,number_of_utterances))
         timer.start()
 
     user_data = USER_STATE.get(user_id, {})
@@ -88,20 +89,22 @@ def handle_query(call):
         else:
             remaining = number_of_utterances - user_data["utterances_recorded"]
             bot.send_message(call.message.chat.id, f"لطفا {remaining} جمله دیگر ضبط کنید.")
-            timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,))
+            timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,remaining))
             timer.start()
 
     elif call.data == "re_record_voice":
         if "current_voice" in user_data:
             del USER_STATE[user_id]["current_voice"]
         bot.send_message(call.message.chat.id, "لطفا جمله خود را دوباره ضبط کنید.")
-        timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,))
+        remaining = number_of_utterances - user_data["utterances_recorded"]
+        timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,remaining))
         timer.start()
 
     if call.data == "continue_recording":
         USER_STATE[user_id]["prompt_time"] = time.time()
         bot.send_message(call.message.chat.id, "لطفا جمله خود را دوباره ضبط کنید.")
-        timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,))
+        remaining = number_of_utterances - user_data["utterances_recorded"]
+        timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,remaining))
         timer.start()
 
 @bot.message_handler(content_types=['voice'])
