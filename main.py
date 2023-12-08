@@ -89,27 +89,21 @@ def handle_query(call):
     #     USER_STATE[user_id]["stage"] = "completed"
     #     bot.send_message(call.message.chat.id, "Thank you for providing your information.")
 
-
 @bot.message_handler(content_types=['voice'])
 def handle_voice(message):
     user_id = message.from_user.id
 
     if USER_STATE.get(user_id, {}).get("stage") == "recording":
-        # Code to save the voice message
-        # For example, download and save the file
-        file_info = bot.get_file(message.voice.file_id)
-        downloaded_file = bot.download_file(file_info.file_path)
-        with open(f"user_{user_id}_utterance_{USER_STATE[user_id]['utterances_recorded']}.ogg", 'wb') as new_file:
-            new_file.write(downloaded_file)
+        # Temporarily store the file_id of the voice message
+        USER_STATE[user_id]["current_voice"] = message.voice.file_id
 
-        USER_STATE[user_id]["utterances_recorded"] += 1
+        # Create markup for submit and re-record buttons
+        markup = types.InlineKeyboardMarkup()
+        submit_button = types.InlineKeyboardButton("Submit", callback_data="submit_voice")
+        re_record_button = types.InlineKeyboardButton("Re-record", callback_data="re_record_voice")
+        markup.add(submit_button, re_record_button)
 
-        if USER_STATE[user_id]["utterances_recorded"] >= number_of_utterances:
-            bot.send_message(message.chat.id, "Thank you for recording all the utterances.")
-            USER_STATE[user_id]["stage"] = "completed"
-        else:
-            remaining = number_of_utterances - USER_STATE[user_id]["utterances_recorded"]
-            bot.send_message(message.chat.id, f"Please record and send {remaining} more utterance(s).")
+        bot.send_message(message.chat.id, "Would you like to submit this recording or re-record it?", reply_markup=markup)
             
 
 
