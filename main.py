@@ -8,7 +8,7 @@ BOT_TOKEN = "6759949264:AAGZU-NAkP72r8U6VfI8IoMDlrk3I6O8Uo8"
 bot = telebot.TeleBot(BOT_TOKEN)
 
 USER_STATE = {}
-
+number_of_utterances=100
 def send_gender_keyboard(chat_id):
     markup = types.InlineKeyboardMarkup()
     male_button = types.InlineKeyboardButton("Male", callback_data="gender_male")
@@ -54,8 +54,38 @@ def handle_query(call):
 
     elif call.data.startswith("education_"):
         USER_STATE[user_id]["education"] = call.data.split("_")[1]
-        USER_STATE[user_id]["stage"] = "completed"
-        bot.send_message(call.message.chat.id, "Thank you for providing your information.")
+        USER_STATE[user_id]["utterances_recorded"] = 0
+        USER_STATE[user_id]["stage"] = "recording"
+        bot.send_message(call.message.chat.id, f"Please record and send {number_of_utterances} utterances.")
+
+    # elif call.data.startswith("education_"):
+    #     USER_STATE[user_id]["education"] = call.data.split("_")[1]
+    #     USER_STATE[user_id]["stage"] = "completed"
+    #     bot.send_message(call.message.chat.id, "Thank you for providing your information.")
+
+
+@bot.message_handler(content_types=['voice'])
+def handle_voice(message):
+    user_id = message.from_user.id
+
+    if USER_STATE.get(user_id, {}).get("stage") == "recording":
+        # Code to save the voice message
+        # For example, download and save the file
+        file_info = bot.get_file(message.voice.file_id)
+        downloaded_file = bot.download_file(file_info.file_path)
+        with open(f"user_{user_id}_utterance_{USER_STATE[user_id]['utterances_recorded']}.ogg", 'wb') as new_file:
+            new_file.write(downloaded_file)
+
+        USER_STATE[user_id]["utterances_recorded"] += 1
+
+        if USER_STATE[user_id]["utterances_recorded"] >= number_of_utterances:
+            bot.send_message(message.chat.id, "Thank you for recording all the utterances.")
+            USER_STATE[user_id]["stage"] = "completed"
+        else:
+            remaining = number_of_utterances - USER_STATE[user_id]["utterances_recorded"]
+            bot.send_message(message.chat.id, f"Please record and send {remaining} more utterance(s).")
+
+
 
 @bot.message_handler(func=lambda message: True)
 def handle_messages(message):
