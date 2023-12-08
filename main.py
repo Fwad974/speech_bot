@@ -2,10 +2,20 @@ import os
 import time
 import telebot
 from telebot import types
-
+import threading
 BOT_TOKEN = "6759949264:AAGZU-NAkP72r8U6VfI8IoMDlrk3I6O8Uo8"
 
 bot = telebot.TeleBot(BOT_TOKEN)
+
+def send_expiry_message(user_id):
+    time.sleep(RECORDING_EXPIRY_TIME)  # Wait for 120 seconds
+    user_data = USER_STATE.get(user_id, {})
+    if user_data.get("stage") == "recording" and (time.time() - user_data.get("prompt_time", 0)) >= RECORDING_EXPIRY_TIME:
+        markup = types.InlineKeyboardMarkup()
+        continue_button = types.InlineKeyboardButton("Continue", callback_data="continue_recording")
+        markup.add(continue_button)
+        bot.send_message(user_id, "Time to record has expired. Press continue to try again.", reply_markup=markup)
+
 
 USER_STATE = {}
 number_of_utterances=10
@@ -55,10 +65,15 @@ def handle_query(call):
         USER_STATE[user_id]["stage"] = "awaiting_age"
 
     elif call.data.startswith("education_"):
-        USER_STATE[user_id]["education"] = call.data.split("_")[1]
-        USER_STATE[user_id]["utterances_recorded"] = 0
-        USER_STATE[user_id]["stage"] = "recording"
+        USER_STATE[user_id] = {
+            "education": call.data.split("_")[1],
+            "utterances_recorded": 0,
+            "stage": "recording",
+            "prompt_time": time.time()
+        }
         bot.send_message(call.message.chat.id, f"Please record and send {number_of_utterances} utterances.")
+        timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,))
+        timer.start()
 
     user_data = USER_STATE.get(user_id, {})
 
@@ -78,7 +93,9 @@ def handle_query(call):
             USER_STATE[user_id]["stage"] = "completed"
         else:
             remaining = number_of_utterances - user_data["utterances_recorded"]
-            bot.send_message(call.message.chat.id, f"Please record and send {remaining} more utterance(s).")
+            bot.send_message(call.message.chat.id, f"Please record and send {number_of_utterances} utterances.")
+            timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,))
+            timer.start()
 
     elif call.data == "re_record_voice":
         # Clear the current voice reference and prompt for re-recording
