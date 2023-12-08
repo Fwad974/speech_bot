@@ -12,8 +12,8 @@ number_of_utterances = 10
 
 def send_expiry_message(user_id,conv_id):
     time.sleep(RECORDING_EXPIRY_TIME)
-    remaining = number_of_utterances - user_data["utterances_recorded"]
     user_data = USER_STATE.get(user_id, {})
+    remaining = number_of_utterances - user_data["utterances_recorded"]
     if conv_id == remaining and user_data.get("stage") == "recording" and (time.time() - user_data.get("prompt_time", 0)) >= RECORDING_EXPIRY_TIME:
         markup = types.InlineKeyboardMarkup()
         continue_button = types.InlineKeyboardButton("ادامه", callback_data="continue_recording")
