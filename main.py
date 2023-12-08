@@ -9,6 +9,8 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 USER_STATE = {}
 number_of_utterances=10
+RECORDING_EXPIRY_TIME = 120 
+
 def send_gender_keyboard(chat_id):
     markup = types.InlineKeyboardMarkup()
     male_button = types.InlineKeyboardButton("Male", callback_data="gender_male")
@@ -83,6 +85,9 @@ def handle_query(call):
         if "current_voice" in user_data:
             del USER_STATE[user_id]["current_voice"]
         bot.send_message(call.message.chat.id, "Please re-record your utterance.")
+    if call.data == "continue_recording":
+        USER_STATE[user_id]["prompt_time"] = time.time()  # Reset the prompt time
+        bot.send_message(call.message.chat.id, "Please record your utterance again.")
 
     # elif call.data.startswith("education_"):
     #     USER_STATE[user_id]["education"] = call.data.split("_")[1]
@@ -92,18 +97,28 @@ def handle_query(call):
 @bot.message_handler(content_types=['voice'])
 def handle_voice(message):
     user_id = message.from_user.id
+    user_data = USER_STATE.get(user_id, {})
+    if user_data.get("stage") == "recording":
+        current_time = time.time()
+        prompt_time = user_data.get("prompt_time")
 
-    if USER_STATE.get(user_id, {}).get("stage") == "recording":
-        # Temporarily store the file_id of the voice message
-        USER_STATE[user_id]["current_voice"] = message.voice.file_id
-
-        # Create markup for submit and re-record buttons
-        markup = types.InlineKeyboardMarkup()
-        submit_button = types.InlineKeyboardButton("Submit", callback_data="submit_voice")
-        re_record_button = types.InlineKeyboardButton("Re-record", callback_data="re_record_voice")
-        markup.add(submit_button, re_record_button)
-
-        bot.send_message(message.chat.id, "Would you like to submit this recording or re-record it?", reply_markup=markup)
+        if prompt_time and (current_time - prompt_time) <= RECORDING_EXPIRY_TIME:
+            # Temporarily store the file_id of the voice message
+            USER_STATE[user_id]["current_voice"] = message.voice.file_id
+    
+            # Create markup for submit and re-record buttons
+            markup = types.InlineKeyboardMarkup()
+            submit_button = types.InlineKeyboardButton("Submit", callback_data="submit_voice")
+            re_record_button = types.InlineKeyboardButton("Re-record", callback_data="re_record_voice")
+            markup.add(submit_button, re_record_button)
+    
+            bot.send_message(message.chat.id, "Would you like to submit this recording or re-record it?", reply_markup=markup)
+        else:
+            # Time expired, prompt to continue
+            markup = types.InlineKeyboardMarkup()
+            continue_button = types.InlineKeyboardButton("Continue", callback_data="continue_recording")
+            markup.add(continue_button)
+            bot.send_message(message.chat.id, "This post expired. Press continue to record again.", reply_markup=markup)
             
 
 
