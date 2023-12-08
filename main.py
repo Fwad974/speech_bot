@@ -23,38 +23,53 @@ def send_welcome(message):
 @bot.callback_query_handler(func=lambda call: True)
 def handle_query(call):
     if call.data == "start_recording":
-        # Here you can send a message to the user to open a form for gender, age, etc.
-        bot.send_message(call.message.chat.id, "لطفا جنسیت، سن و گویش/استان خود را وارد کنید:")
-        # You might want to implement a state machine or a way to keep track of user's responses.
+        send_gender_keyboard(call.message.chat.id)
+        USER_STATE[call.from_user.id] = {"stage": "awaiting_gender"}
+def send_gender_keyboard(chat_id):
+    markup = types.InlineKeyboardMarkup()
+    male_button = types.InlineKeyboardButton("Male", callback_data="gender_male")
+    female_button = types.InlineKeyboardButton("Female", callback_data="gender_female")
+    markup.add(male_button, female_button)
+    bot.send_message(chat_id, "Please select your gender:", reply_markup=markup)
 
-USER_STATE = {}
+def send_education_keyboard(chat_id):
+    markup = types.InlineKeyboardMarkup()
+    buttons = [
+        types.InlineKeyboardButton("Diploma and Below", callback_data="education_diploma_below"),
+        types.InlineKeyboardButton("Bachelor's Degree", callback_data="education_bachelors"),
+        types.InlineKeyboardButton("Master's Degree", callback_data="education_masters"),
+        types.InlineKeyboardButton("PhD", callback_data="education_phd")
+    ]
+    for button in buttons:
+        markup.add(button)
+    bot.send_message(chat_id, "Please select your education level:", reply_markup=markup)
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def handle_query(call):
+    user_id = call.from_user.id
+
+    if user_id not in USER_STATE:
+        USER_STATE[user_id] = {"stage": None}
+
+    if call.data.startswith("gender_"):
+        USER_STATE[user_id]["gender"] = call.data.split("_")[1]
+        bot.send_message(call.message.chat.id, "Please enter your age in 'YY' format:")
+        USER_STATE[user_id]["stage"] = "awaiting_age"
+
+    elif call.data.startswith("education_"):
+        USER_STATE[user_id]["education"] = call.data.split("_")[1]
+        USER_STATE[user_id]["stage"] = "completed"
+        bot.send_message(call.message.chat.id, "Thank you for providing your information.")
 
 def get_user_profile(message):
     user_id = message.from_user.id
-    if user_id not in USER_STATE:
-        USER_STATE[user_id] = {"stage": "gender", "data": {}}
-    user_data = USER_STATE[user_id]
 
-    if user_data["stage"] == "gender":
-        user_data["data"]["gender"] = message.text
-        user_data["stage"] = "age"
-        bot.reply_to(message, "لطفا سن خود را وارد کنید:")
-    elif user_data["stage"] == "age":
-        user_data["data"]["age"] = message.text
-        user_data["stage"] = "state_dialect"
-        bot.reply_to(message, "لطفا گویش/استان خود را وارد کنید:")
-    elif user_data["stage"] == "state_dialect":
-        user_data["data"]["state_dialect"] = message.text
-        user_data["stage"] = "completed"
-        bot.reply_to(message, "اطلاعات شما ثبت شد. متشکرم!")
-        # Here you can process the collected data or store it
-
-@bot.message_handler(func=lambda msg: True)
-def echo_all(message):
-    if message.text:
-        get_user_profile(message)
-    else:
-        bot.reply_to(message, message.text)
-
+    if USER_STATE[user_id]["stage"] == "awaiting_age":
+        if message.text.isdigit() and len(message.text) == 2:
+            USER_STATE[user_id]["age"] = message.text
+            send_education_keyboard(message.chat.id)
+        else:
+            bot.reply_to(message, "Invalid age format. Please enter your age in 'YY' format.")
 
 bot.infinity_polling()
