@@ -27,5 +27,34 @@ def handle_query(call):
         bot.send_message(call.message.chat.id, "لطفا جنسیت، سن و گویش/استان خود را وارد کنید:")
         # You might want to implement a state machine or a way to keep track of user's responses.
 
+USER_STATE = {}
+
+def get_user_profile(message):
+    user_id = message.from_user.id
+    if user_id not in USER_STATE:
+        USER_STATE[user_id] = {"stage": "gender", "data": {}}
+    user_data = USER_STATE[user_id]
+
+    if user_data["stage"] == "gender":
+        user_data["data"]["gender"] = message.text
+        user_data["stage"] = "age"
+        bot.reply_to(message, "لطفا سن خود را وارد کنید:")
+    elif user_data["stage"] == "age":
+        user_data["data"]["age"] = message.text
+        user_data["stage"] = "state_dialect"
+        bot.reply_to(message, "لطفا گویش/استان خود را وارد کنید:")
+    elif user_data["stage"] == "state_dialect":
+        user_data["data"]["state_dialect"] = message.text
+        user_data["stage"] = "completed"
+        bot.reply_to(message, "اطلاعات شما ثبت شد. متشکرم!")
+        # Here you can process the collected data or store it
+
+@bot.message_handler(func=lambda msg: True)
+def echo_all(message):
+    if message.text:
+        get_user_profile(message)
+    else:
+        bot.reply_to(message, message.text)
+
 
 bot.infinity_polling()
