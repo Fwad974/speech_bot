@@ -126,14 +126,16 @@ def send_expiry_message(user_id,conv_id):
         markup = types.InlineKeyboardMarkup()
         continue_button = types.InlineKeyboardButton("ادامه", callback_data="continue_recording")
         markup.add(continue_button)
-        bot.send_message(user_id, "زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
+        sent_message =bot.send_message(user_id, "زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
+        USER_STATE[user_id][last_message_id] = sent_message.message_id
 
 def send_gender_keyboard(chat_id):
     markup = types.InlineKeyboardMarkup()
     male_button = types.InlineKeyboardButton("مرد", callback_data="gender_male")
     female_button = types.InlineKeyboardButton("زن", callback_data="gender_female")
     markup.add(male_button, female_button)
-    bot.send_message(chat_id, "لطفا جنسیت خود را انتخاب کنید:", reply_markup=markup)
+    sent_message =bot.send_message(chat_id, "لطفا جنسیت خود را انتخاب کنید:", reply_markup=markup)
+    USER_STATE[user_id][last_message_id] = sent_message.message_id
 
 def send_education_keyboard(chat_id):
     markup = types.InlineKeyboardMarkup()
@@ -145,7 +147,8 @@ def send_education_keyboard(chat_id):
     ]
     for button in buttons:
         markup.add(button)
-    bot.send_message(chat_id, "لطفا سطح تحصیلات خود را انتخاب کنید:", reply_markup=markup)
+    sent_message = bot.send_message(chat_id, "لطفا سطح تحصیلات خود را انتخاب کنید:", reply_markup=markup)
+    USER_STATE[user_id][last_message_id] = sent_message.message_id
 
 @bot.message_handler(commands=['start', 'hello'])
 def send_welcome(message):
@@ -154,7 +157,8 @@ def send_welcome(message):
     markup = types.InlineKeyboardMarkup()
     start_button = types.InlineKeyboardButton(text="شروع", callback_data="start_recording")
     markup.add(start_button)
-    bot.send_message(message.chat.id, welcome_msg, reply_markup=markup)
+    sent_message = bot.send_message(message.chat.id, welcome_msg, reply_markup=markup)
+    USER_STATE[user_id][last_message_id] = sent_message.message_id
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_query(call):
@@ -172,7 +176,8 @@ def handle_query(call):
     elif call.data.startswith("gender_"):
         USER_STATE[user_id]["gender"] = call.data.split("_")[1]
         insert_or_update_user_data( user_id, gender=USER_STATE[user_id]["gender"])
-        bot.send_message(call.message.chat.id, "لطفا سن خود را به صورت 'سال تولد' وارد کنید:")
+        sent_message = bot.send_message(call.message.chat.id, "لطفا سن خود را به صورت 'سال تولد' وارد کنید:")
+        USER_STATE[user_id][last_message_id] = sent_message.message_id
         USER_STATE[user_id]["stage"] = "awaiting_age"
 
     elif call.data.startswith("education_"):
@@ -183,7 +188,8 @@ def handle_query(call):
             "prompt_time": time.time()
         }
         insert_or_update_user_data( user_id, education=USER_STATE[user_id]["education"])
-        bot.send_message(call.message.chat.id, f"لطفا {number_of_utterances} جمله زیر را ضبط کنید.")
+        sent_message = bot.send_message(call.message.chat.id, f"لطفا {number_of_utterances} جمله زیر را ضبط کنید.")
+        USER_STATE[user_id][last_message_id] = sent_message.message_id
         timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,number_of_utterances))
         timer.start()
 
@@ -197,25 +203,29 @@ def handle_query(call):
         del USER_STATE[user_id]["current_voice"]
 
         if user_data["utterances_recorded"] >= number_of_utterances:
-            bot.send_message(call.message.chat.id, "تشکر از شما برای ضبط تمام جملات.")
+            sent_message = bot.send_message(call.message.chat.id, "تشکر از شما برای ضبط تمام جملات.")
+            USER_STATE[user_id][last_message_id] = sent_message.message_id
             USER_STATE[user_id]["stage"] = "completed"
         else:
             remaining = number_of_utterances - user_data["utterances_recorded"]
-            bot.send_message(call.message.chat.id, f"لطفا {remaining} جمله دیگر ضبط کنید.")
+            sent_message = bot.send_message(call.message.chat.id, f"لطفا {remaining} جمله دیگر ضبط کنید.")
+            USER_STATE[user_id][last_message_id] = sent_message.message_id
             timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,remaining))
             timer.start()
 
     elif call.data == "re_record_voice":
         if "current_voice" in user_data:
             del USER_STATE[user_id]["current_voice"]
-        bot.send_message(call.message.chat.id, "لطفا جمله خود را دوباره ضبط کنید.")
+        sent_message = bot.send_message(call.message.chat.id, "لطفا جمله خود را دوباره ضبط کنید.")
+        USER_STATE[user_id][last_message_id] = sent_message.message_id
         remaining = number_of_utterances - user_data["utterances_recorded"]
         timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,remaining))
         timer.start()
 
     if call.data == "continue_recording":
         USER_STATE[user_id]["prompt_time"] = time.time()
-        bot.send_message(call.message.chat.id, "لطفا جمله خود را دوباره ضبط کنید.")
+        sent_message = bot.send_message(call.message.chat.id, "لطفا جمله خود را دوباره ضبط کنید.")
+        USER_STATE[user_id][last_message_id] = sent_message.message_id
         remaining = number_of_utterances - user_data["utterances_recorded"]
         timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,remaining))
         timer.start()
@@ -234,12 +244,14 @@ def handle_voice(message):
             submit_button = types.InlineKeyboardButton("تایید", callback_data="submit_voice")
             re_record_button = types.InlineKeyboardButton("ضبط مجدد", callback_data="re_record_voice")
             markup.add(submit_button, re_record_button)
-            bot.send_message(message.chat.id, "آیا می‌خواهید این ضبط را تایید کنید یا دوباره ضبط کنید؟", reply_markup=markup)
+            sent_message = bot.send_message(message.chat.id, "آیا می‌خواهید این ضبط را تایید کنید یا دوباره ضبط کنید؟", reply_markup=markup)
+            USER_STATE[user_id][last_message_id] = sent_message.message_id
         else:
             markup = types.InlineKeyboardMarkup()
             continue_button = types.InlineKeyboardButton("ادامه", callback_data="continue_recording")
             markup.add(continue_button)
-            bot.send_message(message.chat.id, "زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
+            sent_message = bot.send_message(message.chat.id, "زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
+            USER_STATE[user_id][last_message_id] = sent_message.message_id
 
 @bot.message_handler(func=lambda message: True)
 def handle_messages(message):
