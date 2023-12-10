@@ -13,7 +13,7 @@ database="DB"
 
 
 
-global mydb = mysql.connector.connect(
+mydb = mysql.connector.connect(
         host="localhost",
         user="root",
         password="password",
