@@ -160,7 +160,7 @@ def send_welcome(message):
 def handle_query(call):
     user_id = call.from_user.id
     user_data = USER_STATE.get(user_id, {})
-    
+    print(call.message.message_id , user_data.get("last_message_id"))
     if call.message.message_id != user_data.get("last_message_id"):
         return 
 
