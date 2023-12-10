@@ -102,8 +102,7 @@ CREATE TABLE IF NOT EXISTS recorded (
 
 # Create table
 def create_table(create_table_sql):
-    db_cursor = get_db_cursor(db_connection)
-
+    db_cursor = cursor_instance()
     db_cursor.execute(create_table_sql)
     mydb.commit()
 
