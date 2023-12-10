@@ -158,6 +158,7 @@ def send_welcome(message):
     start_button = types.InlineKeyboardButton(text="شروع", callback_data="start_recording")
     markup.add(start_button)
     sent_message = bot.send_message(message.chat.id, welcome_msg, reply_markup=markup)
+    print(sent_message.message_id)
     USER_STATE[user_id][last_message_id] = sent_message.message_id
 
 @bot.callback_query_handler(func=lambda call: True)
