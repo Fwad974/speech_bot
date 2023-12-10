@@ -3,6 +3,115 @@ import time
 import telebot
 from telebot import types
 import threading
+import mysql.connector
+
+
+host="localhost"
+user="root"
+password="password"
+database="DB"
+
+
+
+global mydb = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="password",
+        database="DB"
+        )
+
+
+
+def cursor_instance():
+    global mydb 
+    try:
+        return mydb.cursor()
+    except:
+        mydb = mysql.connector.connect(
+            host=host,
+            user=user,
+            password=password,
+            database=database
+        )
+        return mydb.cursor()
+
+
+def insert_or_update_user_data( telegram_id, gender=None, age=None, education=None, total_recorded=0):
+    # Check if user already exists in the database
+    cursor=cursor_instance()
+    cursor.execute("SELECT * FROM users WHERE telegram_id = %s", (telegram_id,))
+    user = cursor.fetchone()
+
+    if user:
+        # Update existing user
+        update_query = "UPDATE users SET "
+        update_params = []
+        if gender:
+            update_query += "gender = %s, "
+            update_params.append(gender)
+        if age:
+            update_query += "age = %s, "
+            update_params.append(age)
+        if education:
+            update_query += "education = %s, "
+            update_params.append(education)
+        # No need to update total_recorded here, as it's managed elsewhere
+        # Remove trailing comma and space
+        update_query = update_query.rstrip(', ')
+        update_query += " WHERE telegram_id = %s"
+        update_params.append(telegram_id)
+        cursor.execute(update_query, tuple(update_params))
+        mydb.commit()
+    else:
+        # Insert new user
+        insert_query = "INSERT INTO users (telegram_id, gender, age, education, total_recorded) VALUES (%s, %s, %s, %s, %s)"
+        cursor.execute(insert_query, (telegram_id, gender, age, education, total_recorded))
+        mydb.commit()
+
+# SQL Statement to create table
+create_table_user_sql = """
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    telegram_id BIGINT NOT NULL,
+    gender VARCHAR(10),
+    age INT,
+    education VARCHAR(50),
+    total_recorded INT DEFAULT 0
+);
+"""
+create_tasks_table_sql = """
+CREATE TABLE IF NOT EXISTS tasks (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    text TEXT,
+    record_count INT DEFAULT 0,
+    last_record TIMESTAMP NULL DEFAULT NULL
+);
+"""
+
+create_recorded_table_sql = """
+CREATE TABLE IF NOT EXISTS recorded (
+    user_email VARCHAR(100) DEFAULT NULL,
+    user_phone VARCHAR(100) DEFAULT NULL,
+    task_id INT NOT NULL,
+    created_at TIMESTAMP NULL DEFAULT NULL,
+    id INT NOT NULL AUTO_INCREMENT,
+    noise VARCHAR(100) DEFAULT NULL,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+"""
+
+# Create table
+def create_table(create_table_sql):
+    db_cursor = get_db_cursor(db_connection)
+
+    db_cursor.execute(create_table_sql)
+    mydb.commit()
+
+    db_cursor.close()
+
+create_table(create_table_user_sql)
+create_table(create_recorded_table_sql)
+create_table(create_tasks_table_sql)
 
 BOT_TOKEN = "6759949264:AAGZU-NAkP72r8U6VfI8IoMDlrk3I6O8Uo8"
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -51,13 +160,19 @@ def send_welcome(message):
 @bot.callback_query_handler(func=lambda call: True)
 def handle_query(call):
     user_id = call.from_user.id
+    user_data = USER_STATE.get(user_id, {})
+    
+    if call.message.message_id != user_data.get("last_message_id"):
+        return 
 
     if call.data == "start_recording":
         send_gender_keyboard(call.message.chat.id)
+        insert_or_update_user_data(user_id)
         USER_STATE[user_id] = {"stage": "awaiting_gender"}
 
     elif call.data.startswith("gender_"):
         USER_STATE[user_id]["gender"] = call.data.split("_")[1]
+        insert_or_update_user_data( user_id, gender=USER_STATE[user_id]["gender"])
         bot.send_message(call.message.chat.id, "لطفا سن خود را به صورت 'سال تولد' وارد کنید:")
         USER_STATE[user_id]["stage"] = "awaiting_age"
 
@@ -68,11 +183,10 @@ def handle_query(call):
             "stage": "recording",
             "prompt_time": time.time()
         }
+        insert_or_update_user_data( user_id, education=USER_STATE[user_id]["education"])
         bot.send_message(call.message.chat.id, f"لطفا {number_of_utterances} جمله زیر را ضبط کنید.")
         timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,number_of_utterances))
         timer.start()
-
-    user_data = USER_STATE.get(user_id, {})
 
     if call.data == "submit_voice" and "current_voice" in user_data:
         file_info = bot.get_file(user_data["current_voice"])
@@ -138,6 +252,7 @@ def handle_messages(message):
     if USER_STATE[user_id]["stage"] == "awaiting_age":
         if message.text.isdigit() and len(message.text) == 2:
             USER_STATE[user_id]["age"] = message.text
+            insert_or_update_user_data( user_id, age=USER_STATE[user_id]["age"])
             send_education_keyboard(message.chat.id)
         else:
             bot.reply_to(message, "فرمت سن وارد شده نامعتبر است. لطفا سن خود را به صورت 'سال تولد' وارد کنید.")
