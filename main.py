@@ -158,16 +158,16 @@ def send_welcome(message):
     start_button = types.InlineKeyboardButton(text="شروع", callback_data="start_recording")
     markup.add(start_button)
     sent_message = bot.send_message(message.chat.id, welcome_msg, reply_markup=markup)
-    print(sent_message.message_id)
+    # print(sent_message.message_id)
     USER_STATE[user_id][last_message_id] = sent_message.message_id
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_query(call):
     user_id = call.from_user.id
     user_data = USER_STATE.get(user_id, {})
-    print(call.message.message_id , user_data.get("last_message_id"))
-    if call.message.message_id != user_data.get("last_message_id"):
-        return 
+    # print(call.message.message_id , user_data.get("last_message_id"))
+    # if call.message.message_id != user_data.get("last_message_id"):
+        # return 
 
     if call.data == "start_recording":
         send_gender_keyboard(call.message.chat.id)
