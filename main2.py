@@ -16,7 +16,9 @@ def send_expiry_message(user_id,conv_id):
         markup = types.InlineKeyboardMarkup()
         continue_button = types.InlineKeyboardButton("ادامه", callback_data="continue_recording")
         markup.add(continue_button)
-        bot.send_message(user_id, "زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
+        sent_message=bot.send_message(user_id, "زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
+        user_id = message.from_user.id
+        USER_STATE[user_id]={'last_message_id':sent_message.message_id}
 def send_gender_keyboard(chat_id,message_id):
     markup = types.InlineKeyboardMarkup()
     male_button = types.InlineKeyboardButton("مرد", callback_data="gender_male")
@@ -77,13 +79,15 @@ def handle_query(call):
             USER_STATE[user_id]["stage"] = "completed"
         else:
             remaining = number_of_utterances - user_data["utterances_recorded"]
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=USER_STATE[user_id]['last_message_id'], text=f"لطفا {remaining} جمله دیگر ضبط کنید.")
             bot.send_message(call.message.chat.id, f"لطفا {remaining} جمله دیگر ضبط کنید.")
             timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,remaining))
             timer.start()
     elif call.data == "re_record_voice":
         if "current_voice" in user_data:
             del USER_STATE[user_id]["current_voice"]
-        bot.send_message(call.message.chat.id, "لطفا جمله خود را دوباره ضبط کنید.")
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=USER_STATE[user_id]['last_message_id'], text="لطفا جمله خود را دوباره ضبط کنید.")
+        #bot.send_message(call.message.chat.id, "لطفا جمله خود را دوباره ضبط کنید.")
         remaining = number_of_utterances - user_data["utterances_recorded"]
         timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,remaining))
         timer.start()
@@ -107,6 +111,8 @@ def handle_voice(message):
             re_record_button = types.InlineKeyboardButton("ضبط مجدد", callback_data="re_record_voice")
             markup.add(submit_button, re_record_button)
             bot.send_message(message.chat.id, "آیا می‌خواهید این ضبط را تایید کنید یا دوباره ضبط کنید؟", reply_markup=markup)
+            user_id = message.from_user.id
+            USER_STATE[user_id]={'last_message_id':sent_message.message_id}
         else:
             markup = types.InlineKeyboardMarkup()
             continue_button = types.InlineKeyboardButton("ادامه", callback_data="continue_recording")
@@ -122,7 +128,9 @@ def handle_messages(message):
             USER_STATE[user_id]["utterances_recorded"] = 0
             USER_STATE[user_id]["stage"] = "recording"
             USER_STATE[user_id]["prompt_time"]= time.time()
-            bot.send_message(message.chat.id, f"لطفا {number_of_utterances} جمله زیر را ضبط کنید.")
+            sent_message = bot.send_message(message.chat.id, f"لطفا {number_of_utterances} جمله زیر را ضبط کنید.")
+            user_id = message.from_user.id
+            USER_STATE[user_id]={'last_message_id':sent_message.message_id}
             timer = threading.Thread(target=send_expiry_message, args=(message.chat.id,number_of_utterances))
             timer.start()
         else:
