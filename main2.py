@@ -69,7 +69,7 @@ def handle_query(call):
     #     bot.send_message(call.message.chat.id, f"لطفا {number_of_utterances} جمله زیر را ضبط کنید.")
     #     timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,number_of_utterances))
     #     timer.start()
-        user_id = call.from_user.id
+    user_id = call.from_user.id
 
     if call.data == "start_recording":
         send_gender_keyboard(call.message.chat.id, USER_STATE[user_id]['last_message_id'])
