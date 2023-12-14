@@ -23,7 +23,6 @@ def send_gender_keyboard(chat_id,message_id):
     female_button = types.InlineKeyboardButton("زن", callback_data="gender_female")
     markup.add(male_button, female_button)
     bot.edit_message_text(chat_id=chat_id, message_id=message_id, text="لطفا جنسیت خود را انتخاب کنید:",reply_markup=markup)
-    #bot.send_message(chat_id, "لطفا جنسیت خود را انتخاب کنید:", reply_markup=markup)
 def send_education_keyboard(chat_id, message_id):
     markup = types.InlineKeyboardMarkup()
     buttons = [
@@ -49,26 +48,6 @@ def send_welcome(message):
     print("##   ",USER_STATE)
 @bot.callback_query_handler(func=lambda call: True)
 def handle_query(call):
-    # user_id = call.from_user.id
-    # if call.data == "start_recording":
-    #     print(USER_STATE)
-    #     send_gender_keyboard(call.message.chat.id, USER_STATE[user_id]['last_message_id'])
-    #     USER_STATE[user_id]["stage"]= "awaiting_gender"
-    # elif call.data.startswith("gender_"):
-    #     USER_STATE[user_id]["gender"] = call.data.split("_")[1]
-    #     # bot.send_message(call.message.chat.id, "لطفا سن خود را به صورت 'سال تولد' وارد کنید:")
-    #     bot.edit_message_text(chat_id=call.message.chat.id, message_id=USER_STATE[user_id]['last_message_id'], text= "لطفا سن خود را به صورت 'سال تولد' وارد کنید:")
-    #     USER_STATE[user_id]["stage"] = "awaiting_age"
-    # elif call.data.startswith("education_"):
-    #     USER_STATE[user_id] = {
-    #         "education": call.data.split("_")[1],
-    #         "utterances_recorded": 0,
-    #         "stage": "recording",
-    #         "prompt_time": time.time()
-    #     }
-    #     bot.send_message(call.message.chat.id, f"لطفا {number_of_utterances} جمله زیر را ضبط کنید.")
-    #     timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,number_of_utterances))
-    #     timer.start()
     user_id = call.from_user.id
 
     if call.data == "start_recording":
@@ -144,19 +123,9 @@ def handle_messages(message):
             USER_STATE[user_id]["stage"] = "recording"
             USER_STATE[user_id]["prompt_time"]= time.time()
             bot.send_message(message.chat.id, f"لطفا {number_of_utterances} جمله زیر را ضبط کنید.")
+            timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,number_of_utterances))
+            timer.start()
         else:
             bot.reply_to(message, "فرمت سن وارد شده نامعتبر است. لطفا سن خود را به صورت 'سال تولد' وارد کنید.")
 
-# def handle_messages(message):
-    
-#     # user_id = message.from_user.id
-#     # if user_id not in USER_STATE or USER_STATE[user_id].get("stage") is None:
-#     #     bot.reply_to(message, "لطفا با استفاده از دستور /start فرآیند را شروع کنید.")
-#     #     return
-#     # if USER_STATE[user_id]["stage"] == "awaiting_age":
-#     #     if message.text.isdigit() and len(message.text) == 2:
-#     #         USER_STATE[user_id]["age"] = message.text
-#     #         send_education_keyboard(message.chat.id,USER_STATE[user_id]['last_message_id'])
-#     #     else:
-#     #         bot.reply_to(message, "فرمت سن وارد شده نامعتبر است. لطفا سن خود را به صورت 'سال تولد' وارد کنید.")
 bot.infinity_polling()
