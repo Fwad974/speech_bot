@@ -24,7 +24,7 @@ def send_gender_keyboard(chat_id,message_id):
     markup.add(male_button, female_button)
     bot.edit_message_text(chat_id=chat_id, message_id=message_id, text="لطفا جنسیت خود را انتخاب کنید:",reply_markup=markup)
     #bot.send_message(chat_id, "لطفا جنسیت خود را انتخاب کنید:", reply_markup=markup)
-def send_education_keyboard(chat_id):
+def send_education_keyboard(chat_id, massage_id):
     markup = types.InlineKeyboardMarkup()
     buttons = [
         types.InlineKeyboardButton("دیپلم یا کمتر", callback_data="education_diploma_below"),
@@ -34,7 +34,8 @@ def send_education_keyboard(chat_id):
     ]
     for button in buttons:
         markup.add(button)
-    bot.send_message(chat_id, "لطفا سطح تحصیلات خود را انتخاب کنید:", reply_markup=markup)
+    bot.edit_message_text(chat_id=chat_id, message_id=message_id, text="لطفا سطح تحصیلات خود را انتخاب کنید:", reply_markup=markup)
+    #bot.send_message(chat_id, "لطفا سطح تحصیلات خود را انتخاب کنید:", reply_markup=markup)
 @bot.message_handler(commands=['start', 'hello'])
 def send_welcome(message):
     welcome_msg = ("سلام! به ربات ضبط گفتار فارسی خوش آمدید. این ربات برای جمع‌آوری و ضبط گفتارهای فارسی در مجموعه داده‌های بزرگ آمازون طراحی شده است. "
@@ -55,7 +56,8 @@ def handle_query(call):
         USER_STATE[user_id]["stage"]= "awaiting_gender"
     elif call.data.startswith("gender_"):
         USER_STATE[user_id]["gender"] = call.data.split("_")[1]
-        bot.send_message(call.message.chat.id, "لطفا سن خود را به صورت 'سال تولد' وارد کنید:")
+        # bot.send_message(call.message.chat.id, "لطفا سن خود را به صورت 'سال تولد' وارد کنید:")
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=USER_STATE[user_id]['last_message_id'],"لطفا سن خود را به صورت 'سال تولد' وارد کنید:")
         USER_STATE[user_id]["stage"] = "awaiting_age"
     elif call.data.startswith("education_"):
         USER_STATE[user_id] = {
@@ -124,7 +126,7 @@ def handle_messages(message):
     if USER_STATE[user_id]["stage"] == "awaiting_age":
         if message.text.isdigit() and len(message.text) == 2:
             USER_STATE[user_id]["age"] = message.text
-            send_education_keyboard(message.chat.id)
+            send_education_keyboard(message.chat.id,USER_STATE[user_id]['last_message_id'])
         else:
             bot.reply_to(message, "فرمت سن وارد شده نامعتبر است. لطفا سن خود را به صورت 'سال تولد' وارد کنید.")
 bot.infinity_polling()
