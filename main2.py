@@ -17,12 +17,13 @@ def send_expiry_message(user_id,conv_id):
         continue_button = types.InlineKeyboardButton("ادامه", callback_data="continue_recording")
         markup.add(continue_button)
         bot.send_message(user_id, "زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
-def send_gender_keyboard(chat_id):
+def send_gender_keyboard(chat_id,message_id):
     markup = types.InlineKeyboardMarkup()
     male_button = types.InlineKeyboardButton("مرد", callback_data="gender_male")
     female_button = types.InlineKeyboardButton("زن", callback_data="gender_female")
     markup.add(male_button, female_button)
-    bot.send_message(chat_id, "لطفا جنسیت خود را انتخاب کنید:", reply_markup=markup)
+    bot.edit_message_text(chat_id=chat_id, message_id=message_id, text="لطفا جنسیت خود را انتخاب کنید:",reply_markup=markup)
+    #bot.send_message(chat_id, "لطفا جنسیت خود را انتخاب کنید:", reply_markup=markup)
 def send_education_keyboard(chat_id):
     markup = types.InlineKeyboardMarkup()
     buttons = [
@@ -42,12 +43,13 @@ def send_welcome(message):
     start_button = types.InlineKeyboardButton(text="شروع", callback_data="start_recording")
     markup.add(start_button)
     sent_message = bot.send_message(message.chat.id, welcome_msg, reply_markup=markup)
-    print(sent_message.message_id)
+    user_id = message.from_user.id
+    USER_STATE[user_id]['last_message_id']=sent_message.message_id
 @bot.callback_query_handler(func=lambda call: True)
 def handle_query(call):
     user_id = call.from_user.id
     if call.data == "start_recording":
-        send_gender_keyboard(call.message.chat.id)
+        send_gender_keyboard(call.message.chat.id, USER_STATE[user_id]['last_message_id'])
         USER_STATE[user_id] = {"stage": "awaiting_gender"}
     elif call.data.startswith("gender_"):
         USER_STATE[user_id]["gender"] = call.data.split("_")[1]
