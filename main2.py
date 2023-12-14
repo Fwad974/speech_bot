@@ -24,7 +24,7 @@ def send_gender_keyboard(chat_id,message_id):
     markup.add(male_button, female_button)
     bot.edit_message_text(chat_id=chat_id, message_id=message_id, text="لطفا جنسیت خود را انتخاب کنید:",reply_markup=markup)
     #bot.send_message(chat_id, "لطفا جنسیت خود را انتخاب کنید:", reply_markup=markup)
-def send_education_keyboard(chat_id, massage_id):
+def send_education_keyboard(chat_id, message_id):
     markup = types.InlineKeyboardMarkup()
     buttons = [
         types.InlineKeyboardButton("دیپلم یا کمتر", callback_data="education_diploma_below"),
