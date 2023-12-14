@@ -57,7 +57,7 @@ def handle_query(call):
     elif call.data.startswith("gender_"):
         USER_STATE[user_id]["gender"] = call.data.split("_")[1]
         # bot.send_message(call.message.chat.id, "لطفا سن خود را به صورت 'سال تولد' وارد کنید:")
-        bot.edit_message_text(chat_id=call.message.chat.id, message_id=USER_STATE[user_id]['last_message_id'],"لطفا سن خود را به صورت 'سال تولد' وارد کنید:")
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=USER_STATE[user_id]['last_message_id'], text= "لطفا سن خود را به صورت 'سال تولد' وارد کنید:")
         USER_STATE[user_id]["stage"] = "awaiting_age"
     elif call.data.startswith("education_"):
         USER_STATE[user_id] = {
