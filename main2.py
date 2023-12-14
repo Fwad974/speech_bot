@@ -44,7 +44,7 @@ def send_welcome(message):
     markup.add(start_button)
     sent_message = bot.send_message(message.chat.id, welcome_msg, reply_markup=markup)
     user_id = message.from_user.id
-    USER_STATE[user_id]['last_message_id']=sent_message.message_id
+    USER_STATE[user_id]={'last_message_id':sent_message.message_id}
     print("##   ",USER_STATE)
 @bot.callback_query_handler(func=lambda call: True)
 def handle_query(call):
@@ -52,7 +52,7 @@ def handle_query(call):
     if call.data == "start_recording":
         print(USER_STATE)
         send_gender_keyboard(call.message.chat.id, USER_STATE[user_id]['last_message_id'])
-        USER_STATE[user_id] = {"stage": "awaiting_gender"}
+        USER_STATE[user_id]["stage"]= "awaiting_gender"
     elif call.data.startswith("gender_"):
         USER_STATE[user_id]["gender"] = call.data.split("_")[1]
         bot.send_message(call.message.chat.id, "لطفا سن خود را به صورت 'سال تولد' وارد کنید:")
