@@ -95,7 +95,7 @@ def handle_query(call):
         else:
             remaining = number_of_utterances - user_data["utterances_recorded"]
             sent_message = bot.send_message(call.message.chat.id, f"لطفا {remaining} جمله دیگر ضبط کنید.")
-            USER_STATE[user_id]['last_message_id']=sent_message.message_id}
+            USER_STATE[user_id]['last_message_id']=sent_message.message_id
             timer = threading.Thread(target=send_expiry_message, args=(message.chat.id,number_of_utterances))
             timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,remaining))
             timer.start()
