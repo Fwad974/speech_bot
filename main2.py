@@ -8,17 +8,32 @@ bot = telebot.TeleBot(BOT_TOKEN)
 RECORDING_EXPIRY_TIME = 120  # 120 seconds
 USER_STATE = {}
 number_of_utterances = 10
-def send_expiry_message(user_id,conv_id):
+def send_expiry_message(user_id, conv_id):
     time.sleep(RECORDING_EXPIRY_TIME)
     user_data = USER_STATE.get(user_id, {})
-    print(user_data)
-    remaining = number_of_utterances - user_data["utterances_recorded"]
+    remaining = number_of_utterances - user_data.get("utterances_recorded", 0)
     if conv_id == remaining and user_data.get("stage") == "recording" and (time.time() - user_data.get("prompt_time", 0)) >= RECORDING_EXPIRY_TIME:
         markup = types.InlineKeyboardMarkup()
         continue_button = types.InlineKeyboardButton("ادامه", callback_data="continue_recording")
         markup.add(continue_button)
-        # bot.send_message(user_id, "زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
-        bot.edit_message_text(chat_id=conv_id, message_id=user_data["last_message_id"], text="زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
+        if "last_message_id" in user_data:
+            last_message_id = user_data["last_message_id"]
+            bot.edit_message_text(chat_id=user_id, message_id=last_message_id, text="زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
+        else:
+            # Fallback in case last_message_id is not available
+            bot.send_message(user_id, "زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
+
+# def send_expiry_message(user_id,conv_id):
+#     time.sleep(RECORDING_EXPIRY_TIME)
+#     user_data = USER_STATE.get(user_id, {})
+#     print(user_data)
+#     remaining = number_of_utterances - user_data["utterances_recorded"]
+#     if conv_id == remaining and user_data.get("stage") == "recording" and (time.time() - user_data.get("prompt_time", 0)) >= RECORDING_EXPIRY_TIME:
+#         markup = types.InlineKeyboardMarkup()
+#         continue_button = types.InlineKeyboardButton("ادامه", callback_data="continue_recording")
+#         markup.add(continue_button)
+#         # bot.send_message(user_id, "زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
+#         bot.edit_message_text(chat_id=conv_id, message_id=user_data["last_message_id"], text="زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
 def send_gender_keyboard(chat_id,message_id):
     markup = types.InlineKeyboardMarkup()
     male_button = types.InlineKeyboardButton("مرد", callback_data="gender_male")
