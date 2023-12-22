@@ -142,7 +142,7 @@ def handle_messages(message):
             USER_STATE[user_id]["stage"] = "recording"
             USER_STATE[user_id]["prompt_time"]= time.time()
             sent_message = bot.send_message(message.chat.id, f"لطفا {number_of_utterances} جمله زیر را ضبط کنید.")
-            USER_STATE[user_id]['last_message_id']=sent_message.message_id}
+            USER_STATE[user_id]['last_message_id']=sent_message.message_id
             timer = threading.Thread(target=send_expiry_message, args=(message.chat.id,number_of_utterances))
             timer.start()
         else:
