@@ -116,12 +116,16 @@ def handle_voice(message):
             submit_button = types.InlineKeyboardButton("تایید", callback_data="submit_voice")
             re_record_button = types.InlineKeyboardButton("ضبط مجدد", callback_data="re_record_voice")
             markup.add(submit_button, re_record_button)
-            bot.send_message(message.chat.id, "آیا می‌خواهید این ضبط را تایید کنید یا دوباره ضبط کنید؟", reply_markup=markup)
+            sent_message = bot.send_message(message.chat.id, "آیا می‌خواهید این ضبط را تایید کنید یا دوباره ضبط کنید؟", reply_markup=markup)
+            USER_STATE[user_id]['last_message_id']=sent_message.message_id
         else:
             markup = types.InlineKeyboardMarkup()
             continue_button = types.InlineKeyboardButton("ادامه", callback_data="continue_recording")
             markup.add(continue_button)
-            bot.send_message(message.chat.id, "زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
+            last_message_id = user_data["last_message_id"]
+            bot.edit_message_text(chat_id=user_id, message_id=last_message_id, text="زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
+
+            # bot.send_message(message.chat.id, "زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
 @bot.message_handler(func=lambda message: True)
 def handle_messages(message):
     user_id = message.from_user.id
