@@ -144,7 +144,7 @@ def handle_messages(message):
             USER_STATE[user_id]["prompt_time"]= time.time()
             sent_message = bot.send_message(message.chat.id, f"لطفا {number_of_utterances} جمله زیر را ضبط کنید.")
             USER_STATE[user_id]['last_message_id']=sent_message.message_id
-            timer = threading.Thread(target=send_expiry_message, args=(message.chat.id,remaining))
+            timer = threading.Thread(target=send_expiry_message, args=(message.chat.id,number_of_utterances))
             timer.start()
         else:
             bot.reply_to(message, "فرمت سن وارد شده نامعتبر است. لطفا سن خود را به صورت 'سال تولد' وارد کنید.")
