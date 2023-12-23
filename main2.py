@@ -85,8 +85,11 @@ def handle_query(call):
             USER_STATE[user_id]["stage"] = "completed"
         else:
             remaining = number_of_utterances - user_data["utterances_recorded"]
-            sent_message = bot.send_message(call.message.chat.id, f"لطفا {remaining} جمله دیگر ضبط کنید.")
-            USER_STATE[user_id]['last_message_id']=sent_message.message_id
+            if remaining==number_of_utterances:
+                sent_message = bot.send_message(call.message.chat.id, f"لطفا {remaining} جمله دیگر ضبط کنید.")
+                USER_STATE[user_id]['last_message_id']=sent_message.message_id
+            else:
+                bot.edit_message_text(chat_id=call.message.chat.id, message_id=USER_STATE[user_id]['last_message_id'], text=f"لطفا {remaining} جمله دیگر ضبط کنید."
             timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,remaining))
             timer.start()
     elif call.data == "re_record_voice":
