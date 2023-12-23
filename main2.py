@@ -154,7 +154,8 @@ def handle_query(call):
         timer.start()
     if call.data == "continue_recording":
         USER_STATE[user_id]["prompt_time"] = time.time()
-        bot.edit_message_text(chat_id=call.message.chat.id, message_id=USER_STATE[user_id]['last_message_id'], text="لطفا جمله خود را دوباره ضبط کنید.")
+        remaining = number_of_utterances - user_data["utterances_recorded"]
+        bot.edit_message_text(chat_id=call.message.chat.id, message_id=USER_STATE[user_id]['last_message_id'], text="لطفا جمله "+UTT_LIST[remaining]+" را دوباره ضبط کنید."
         remaining = number_of_utterances - user_data["utterances_recorded"]
         timer = threading.Thread(target=send_expiry_message, args=(call.message.chat.id,remaining))
         timer.start()
