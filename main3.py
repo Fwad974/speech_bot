@@ -3,11 +3,15 @@ import time
 import telebot
 from telebot import types
 import threading
+from threading import Event
+
 BOT_TOKEN = "6886128129:AAHq98W5sws0LOMcjVcIWnSE7SlrC6kBFgM"
 bot = telebot.TeleBot(BOT_TOKEN)
 RECORDING_EXPIRY_TIME = 120  # 120 seconds
 USER_STATE = {}
 number_of_utterances = 10
+THREAD_MANAGER = {}
+
 
 UTT_LIST=["این هفته ساعت پنج صبح بیدارم کن",
 "مرا جمعه ساعت نه صبح بیدار کن",
@@ -59,21 +63,27 @@ UTT_LIST=["این هفته ساعت پنج صبح بیدارم کن",
 "پنج ساعت جلوتر از ساعت گرینویچ چند میشه"]
 
 
-def send_expiry_message(user_id, remaining_utt):
-    time.sleep(RECORDING_EXPIRY_TIME)
+def send_expiry_message(user_id, remaining_utt,stop_thread_flag=Event()):
     user_data = USER_STATE.get(user_id, {})
-    remaining = number_of_utterances - user_data.get("utterances_recorded", 0)
-    if remaining_utt == remaining and user_data.get("stage") == "recording" and (time.time() - user_data.get("prompt_time", 0)) >= RECORDING_EXPIRY_TIME:
-        markup = types.InlineKeyboardMarkup()
-        continue_button = types.InlineKeyboardButton("ادامه", callback_data="continue_recording")
-        markup.add(continue_button)
-        if "last_message_id" in user_data:
-            last_message_id = user_data["last_message_id"]
-            bot.edit_message_text(chat_id=user_id, message_id=last_message_id, text="زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
-        else:
-            # Fallback in case last_message_id is not available
-            sent_message=bot.send_message(user_id, "زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
-            USER_STATE[user_id]['last_message_id']=sent_message.message_id
+    if THREAD_MANAGER.get(user_id,None) is not None:
+         thread_stop_thread_flag = THREAD_MANAGER[user_id]
+         thread_stop_thread_flag.set()  # Signal the thread to stop
+         del THREAD_MANAGER[user_id]
+    THREAD_MANAGER[user_id]=stop_thread_flag
+    time.sleep(RECORDING_EXPIRY_TIME)
+    if not stop_thread_flag.is_set():
+      remaining = number_of_utterances - user_data.get("utterances_recorded", 0)
+      if remaining_utt == remaining and user_data.get("stage") == "recording" and (time.time() - user_data.get("prompt_time", 0)) >= RECORDING_EXPIRY_TIME:
+          markup = types.InlineKeyboardMarkup()
+          continue_button = types.InlineKeyboardButton("ادامه", callback_data="continue_recording")
+          markup.add(continue_button)
+          if "last_message_id" in user_data:
+              last_message_id = user_data["last_message_id"]
+              bot.edit_message_text(chat_id=user_id, message_id=last_message_id, text="زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
+          else:
+              # Fallback in case last_message_id is not available
+              sent_message=bot.send_message(user_id, "زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
+              USER_STATE[user_id]['last_message_id']=sent_message.message_id
 
 
 def send_gender_keyboard(chat_id,message_id):
