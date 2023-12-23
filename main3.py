@@ -4,6 +4,7 @@ import telebot
 from telebot import types
 import threading
 from threading import Event
+import psycopg2
 
 BOT_TOKEN = "6886128129:AAHq98W5sws0LOMcjVcIWnSE7SlrC6kBFgM"
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -11,6 +12,41 @@ RECORDING_EXPIRY_TIME = 120  # 120 seconds
 USER_STATE = {}
 number_of_utterances = 10
 THREAD_MANAGER = {}
+
+class DB_Manager:
+ def __init__(self):
+     self.conn = psycopg2.connect(
+         dbname="sdb",
+         user="new_username",
+         password="new_password",
+         host="localhost"  # or your database host
+         )
+  if not self.chek_table("user_states"):
+     self.create_table("user_states")
+   
+ def check_table(self,table_name):
+    check_table_query = """
+        SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE  table_schema = 'public'
+            AND    table_name   = '"""+table_name +"""'
+        );
+        """
+  try:
+    with self.conn.cursor() as cursor:
+              # Check if table exists
+              cursor.execute(check_table_query)
+              if  cursor.fetchone()[0]:
+                 return True
+               else :
+                return False
+   except psycopg2.DatabaseError as e:
+    print(f"An error occurred: {e}")
+    self.conn.rollback()
+    return False
+ 
+
+
 
 
 UTT_LIST=["این هفته ساعت پنج صبح بیدارم کن",
