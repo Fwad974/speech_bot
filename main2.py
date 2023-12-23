@@ -146,6 +146,7 @@ def handle_query(call):
     elif call.data == "re_record_voice":
         if "current_voice" in user_data:
             del USER_STATE[user_id]["current_voice"]
+        remaining = number_of_utterances - user_data["utterances_recorded"]
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=USER_STATE[user_id]['last_message_id'], text="لطفا جمله "+UTT_LIST[remaining]+" را دوباره ضبط کنید.")
         # bot.send_message(call.message.chat.id, "لطفا جمله "+UTT_LIST[remaining]+" را دوباره ضبط کنید.")
         remaining = number_of_utterances - user_data["utterances_recorded"]
