@@ -3,7 +3,7 @@ import time
 import telebot
 from telebot import types
 import threading
-BOT_TOKEN = "6759949264:AAGZU-NAkP72r8U6VfI8IoMDlrk3I6O8Uo8"
+BOT_TOKEN = "6886128129:AAHq98W5sws0LOMcjVcIWnSE7SlrC6kBFgM"
 bot = telebot.TeleBot(BOT_TOKEN)
 RECORDING_EXPIRY_TIME = 120  # 120 seconds
 USER_STATE = {}
