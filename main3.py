@@ -71,7 +71,7 @@ def send_expiry_message(user_id, remaining_utt,stop_thread_flag=Event()):
          del THREAD_MANAGER[user_id]
     THREAD_MANAGER[user_id]=stop_thread_flag
     time.sleep(RECORDING_EXPIRY_TIME)
-    if not stop_thread_flag.is_set():
+    if not THREAD_MANAGER[user_id].is_set():
       remaining = number_of_utterances - user_data.get("utterances_recorded", 0)
       if remaining_utt == remaining and user_data.get("stage") == "recording" and (time.time() - user_data.get("prompt_time", 0)) >= RECORDING_EXPIRY_TIME:
           markup = types.InlineKeyboardMarkup()
