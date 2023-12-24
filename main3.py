@@ -13,39 +13,101 @@ USER_STATE = {}
 number_of_utterances = 10
 THREAD_MANAGER = {}
 
-class DB_Manager:
- def __init__(self):
-     self.conn = psycopg2.connect(
-         dbname="sdb",
-         user="new_username",
-         password="new_password",
-         host="localhost"  # or your database host
-         )
-  if not self.chek_table("user_states"):
-     self.create_table("user_states")
-   
- def check_table(self,table_name):
-    check_table_query = """
-        SELECT EXISTS (
-            SELECT FROM information_schema.tables 
-            WHERE  table_schema = 'public'
-            AND    table_name   = '"""+table_name +"""'
-        );
-        """
-  try:
-    with self.conn.cursor() as cursor:
-              # Check if table exists
-              cursor.execute(check_table_query)
-              if  cursor.fetchone()[0]:
-                 return True
-               else :
-                return False
-   except psycopg2.DatabaseError as e:
-    print(f"An error occurred: {e}")
-    self.conn.rollback()
-    return False
- 
 
+import psycopg2
+from psycopg2 import sql
+
+class DB_Manager:
+    def __init__(self):
+        self.conn = psycopg2.connect(
+            dbname="sdb",
+            user="new_username",
+            password="new_password",
+            host="localhost"
+        )
+        self.table_queries = {
+            "user_states": """
+                CREATE TABLE IF NOT EXISTS user_state (
+                    user_id BIGINT PRIMARY KEY,
+                    last_message_id BIGINT,
+                    stage VARCHAR(255),
+                    gender VARCHAR(255),
+                    education VARCHAR(255),
+                    age INT,
+                    utterances_recorded INT,
+                    prompt_time TIMESTAMP
+                );
+            """
+        }
+        self.ensure_table_exists("user_states")
+
+    def ensure_table_exists(self, table_name):
+        if not self.check_table(table_name):
+            self.create_table(table_name)
+
+    def create_table(self, table_name):
+        query = self.table_queries.get(table_name)
+        if query:
+            with self.conn.cursor() as cursor:
+                try:
+                    cursor.execute(query)
+                    self.conn.commit()
+                except psycopg2.DatabaseError as e:
+                    print(f"An error occurred: {e}")
+                    self.conn.rollback()
+
+    def check_table(self, table_name):
+        check_table_query = sql.SQL("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public'
+                AND table_name = %s
+            );
+        """)
+        try:
+            with self.conn.cursor() as cursor:
+                cursor.execute(check_table_query, (table_name,))
+                return cursor.fetchone()[0]
+        except psycopg2.DatabaseError as e:
+            print(f"An error occurred: {e}")
+            self.conn.rollback()
+            return False
+
+    def upsert_user_state(self, user_id, user_data):
+        with self.conn.cursor() as cursor:
+            cursor.execute(sql.SQL("""
+                INSERT INTO user_state (user_id, last_message_id, stage, gender, education, age, utterances_recorded, prompt_time)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (user_id) DO UPDATE SET
+                    last_message_id = EXCLUDED.last_message_id,
+                    stage = EXCLUDED.stage,
+                    gender = EXCLUDED.gender,
+                    education = EXCLUDED.education,
+                    age = EXCLUDED.age,
+                    utterances_recorded = EXCLUDED.utterances_recorded,
+                    prompt_time = EXCLUDED.prompt_time;
+            """), (
+                user_id,
+                user_data.get('last_message_id'),
+                user_data.get('stage'),
+                user_data.get('gender'),
+                user_data.get('education'),
+                user_data.get('age'),
+                user_data.get('utterances_recorded'),
+                user_data.get('prompt_time')
+            ))
+            self.conn.commit()
+    def get_user_state(self, user_id):
+        with self.conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT * FROM user_state WHERE user_id = %s;
+            """, (user_id,))
+            result = cursor.fetchone()
+            if result:
+                columns = ['user_id', 'last_message_id', 'stage', 'gender', 'education', 'age', 'utterances_recorded', 'prompt_time']
+                return dict(zip(columns, result))
+            return {}   
+db_manager = DB_Manager()
 
 
 
