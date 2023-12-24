@@ -107,6 +107,29 @@ class DB_Manager:
                 columns = ['user_id', 'last_message_id', 'stage', 'gender', 'education', 'age', 'utterances_recorded', 'prompt_time']
                 return dict(zip(columns, result))
             return {}   
+    def update_last_message_id(self, user_id, last_message_id):
+        with self.conn.cursor() as cursor:
+            cursor.execute("""
+                UPDATE user_state 
+                SET last_message_id = %s 
+                WHERE user_id = %s;
+            """, (last_message_id, user_id))
+            self.conn.commit()        
+    def update_user_stage(self, user_id, stage):
+        with self.conn.cursor() as cursor:
+            cursor.execute("""
+                UPDATE user_state 
+                SET stage = %s 
+                WHERE user_id = %s;
+            """, (stage, user_id))
+            self.conn.commit()
+    def get_last_message_id(self, user_id):
+        with self.conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT last_message_id FROM user_state WHERE user_id = %s;
+            """, (user_id,))
+            result = cursor.fetchone()
+            return result[0] if result else None
 db_manager = DB_Manager()
 
 
@@ -162,6 +185,7 @@ UTT_LIST=["این هفته ساعت پنج صبح بیدارم کن",
 
 
 def send_expiry_message(user_id, remaining_utt,stop_thread_flag=Event()):
+    user_data=db_manager.get_user_state(user_id)
     user_data = USER_STATE.get(user_id, {})
     if THREAD_MANAGER.get(user_id,None) is not None:
          thread_stop_thread_flag = THREAD_MANAGER[user_id]
@@ -181,6 +205,7 @@ def send_expiry_message(user_id, remaining_utt,stop_thread_flag=Event()):
           else:
               # Fallback in case last_message_id is not available
               sent_message=bot.send_message(user_id, "زمان ضبط پیام شما به پایان رسیده است. برای ادامه ضبط دکمه ادامه را فشار دهید.", reply_markup=markup)
+              db_manager.update_last_message_id(user_id, sent_message.message_id)
               USER_STATE[user_id]['last_message_id']=sent_message.message_id
 
 
@@ -211,6 +236,7 @@ def send_welcome(message):
     markup.add(start_button)
     sent_message = bot.send_message(message.chat.id, welcome_msg, reply_markup=markup)
     user_id = message.from_user.id
+    db_manager.update_last_message_id(user_id, sent_message.message_id)
     USER_STATE[user_id]={'last_message_id':sent_message.message_id}
     print("##   ",USER_STATE)
 @bot.callback_query_handler(func=lambda call: True)
@@ -218,16 +244,22 @@ def handle_query(call):
     user_id = call.from_user.id
 
     if call.data == "start_recording":
+        last_message_id = db_manager.get_last_message_id(user_id)
         send_gender_keyboard(call.message.chat.id, USER_STATE[user_id]['last_message_id'])
+        db_manager.update_user_stage(user_id, "awaiting_gender")
         USER_STATE[user_id]["stage"] = "awaiting_gender"
 
     elif call.data.startswith("gender_"):
         USER_STATE[user_id]["gender"] = call.data.split("_")[1]
+        last_message_id = db_manager.get_last_message_id(user_id)
         send_education_keyboard(call.message.chat.id, USER_STATE[user_id]['last_message_id'])
+        db_manager.update_user_stage(user_id, "awaiting_education")
         USER_STATE[user_id]["stage"] = "awaiting_education"
 
     elif call.data.startswith("education_"):
+        last_message_id = db_manager.get_last_message_id(user_id)
         USER_STATE[user_id]["education"] = call.data.split("_")[1]
+        db_manager.update_user_stage(user_id, "awaiting_age")
         USER_STATE[user_id]["stage"] = "awaiting_age"
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=USER_STATE[user_id]['last_message_id'], text="لطفا سن خود را به صورت 'سال تولد' وارد کنید:")
 
